@@ -1,6 +1,6 @@
 # LLaVA-Mini: Efficient Image and Video Large Multimodal Models with One Vision Token
 
-[![arXiv](https://img.shields.io/badge/arXiv-xxxx.xxxxx-b31b1b.svg?logo=arXiv)]()
+[![arXiv](https://img.shields.io/badge/arXiv-2501.03895-b31b1b.svg?logo=arXiv)](https://arxiv.org/abs/2501.03895)
 [![model](https://img.shields.io/badge/%F0%9F%A4%97%20huggingface%20-llava--mini--llama--3.1--8b-orange.svg)](https://huggingface.co/ICTNLP/llava-mini-llama-3.1-8b)
 
 > **[Shaolei Zhang](https://zhangshaolei1998.github.io/), [Qingkai Fang](https://fangqingkai.github.io/), [Zhe Yang](https://nlp.ict.ac.cn/yjdw/xs/ssyjs/202210/t20221020_52708.html), [Yang Feng*](https://people.ucas.edu.cn/~yangfeng?language=en)**
@@ -22,7 +22,7 @@ LLaVA-Mini is a unified large multimodal model that can support the understandin
 💡**Highlight**:
 1. **Good Performance**: LLaVA-Mini achieves performance comparable to LLaVA-v1.5 while using only 1 vision token instead of 576 (compression rate of 0.17%).
 2. **High Efficiency**: LLaVA-Mini can reduce FLOPs by 77%, deliver low-latency responses within 40 milliseconds, and process over 10,000 frames of video on the GPU hardware with 24GB of memory.
-3. **Insights**: To develop LLaVA-Mini, which reduces vision tokens while maintaining visual understanding, we conduct a preliminary analysis to explore how large multimodal models (LMMs) process visual tokens. Please refer to our [paper]() for a detailed analysis and our conclusions.
+3. **Insights**: To develop LLaVA-Mini, which reduces vision tokens while maintaining visual understanding, we conduct a preliminary analysis to explore how large multimodal models (LMMs) process visual tokens. Please refer to our [paper](https://arxiv.org/pdf/2501.03895) for a detailed analysis and our conclusions.
 
 ## 🖥 Demo
 <p align="center" width="100%">
@@ -118,5 +118,19 @@ LLaVA-Mini is a unified large multimodal model that can support the understandin
 - [LLaVA-OneVision](https://github.com/LLaVA-VL/LLaVA-NeXT): The training of LLaVA-Mini involves the image instruction data provided by LLaVA-OneVision.
 
 ## 🖋Citation
+
+If this repository is useful for you, please cite as:
+
+```
+@misc{llavamini,
+      title={LLaVA-Mini: Efficient Image and Video Large Multimodal Models with One Vision Token}, 
+      author={Shaolei Zhang and Qingkai Fang and Zhe Yang and Yang Feng},
+      year={2025},
+      eprint={2501.03895},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2501.03895}, 
+}
+```
 
 If you have any questions, please feel free to submit an issue or contact `zhangshaolei20z@ict.ac.cn`.
