@@ -2,6 +2,7 @@
 
 [![arXiv](https://img.shields.io/badge/arXiv-2501.03895-b31b1b.svg?logo=arXiv)](https://arxiv.org/abs/2501.03895)
 [![model](https://img.shields.io/badge/%F0%9F%A4%97%20huggingface%20-llava--mini--llama--3.1--8b-orange.svg)](https://huggingface.co/ICTNLP/llava-mini-llama-3.1-8b)
+[![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Fictnlp%2FLLaVA-Mini&count_bg=%2379C83D&title_bg=%23555555&icon=awesomelists.svg&icon_color=%23E7E7E7&title=Vistors&edge_flat=false)](https://github.com/ictnlp/LLaVA-Mini)
 
 > **[Shaolei Zhang](https://zhangshaolei1998.github.io/), [Qingkai Fang](https://fangqingkai.github.io/), [Zhe Yang](https://nlp.ict.ac.cn/yjdw/xs/ssyjs/202210/t20221020_52708.html), [Yang Feng*](https://people.ucas.edu.cn/~yangfeng?language=en)**
 
