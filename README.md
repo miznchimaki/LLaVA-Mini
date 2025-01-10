@@ -58,7 +58,7 @@ LLaVA-Mini is a unified large multimodal model that can support the understandin
   ```
 
 ### Command Interaction
-- Image understanding, using `--image-file `:
+- Image understanding, using `--image-file`:
 
   ```bash
   # Image Understanding
@@ -69,7 +69,7 @@ LLaVA-Mini is a unified large multimodal model that can support the understandin
       --query "What's the text on the cake?"
   ```
 
-- Video understanding, using `--video-file `:
+- Video understanding, using `--video-file`:
 
   ```bash
   # Video Understanding
