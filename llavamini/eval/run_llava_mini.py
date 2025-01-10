@@ -153,10 +153,8 @@ def eval_model(args):
 
     model_name = args.model_name
     tokenizer, model, image_processor, context_len = load_pretrained_model(
-        args.model_path, args.model_base, model_name
+        args.model_path, args.model_base, model_name,load_8bit=args.load_8bit,load_4bit=args.load_4bit
     )
-    import pdb;pdb.set_trace()
-
     qs = args.query
     image_token_se = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN
     if IMAGE_PLACEHOLDER in qs:
@@ -227,12 +225,6 @@ def eval_model(args):
         ).to(model.device, dtype=torch.float16).unsqueeze(0)
 
 
-
-
-    
-
-
-
     input_ids = (
         tokenizer_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt")
         .unsqueeze(0)
@@ -268,6 +260,8 @@ if __name__ == "__main__":
     parser.add_argument("--top_p", type=float, default=None)
     parser.add_argument("--num_beams", type=int, default=1)
     parser.add_argument("--max_new_tokens", type=int, default=512)
+    parser.add_argument("--load-8bit", action="store_true")
+    parser.add_argument("--load-4bit", action="store_true")
     args = parser.parse_args()
 
     eval_model(args)
