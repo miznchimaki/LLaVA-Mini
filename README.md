@@ -38,7 +38,7 @@ LLaVA-Mini is a unified large multimodal model that can support the understandin
   # Launch a controller
   python -m llavamini.serve.controller --host 0.0.0.0 --port 10000 &
 
-  # Build the API of LLaVA-Mini
+  # Build the API of LLaVA-Mini, if the VRAM memory is less than 20GB, try using --load-8bit
   CUDA_VISIBLE_DEVICES=0  python -m llavamini.serve.model_worker --host 0.0.0.0 --controller http://localhost:10000 --port 40000 --worker http://localhost:40000 --model-path ICTNLP/llava-mini-llama-3.1-8b --model-name llava-mini &
 
   # Start the interactive interface
@@ -58,7 +58,8 @@ LLaVA-Mini is a unified large multimodal model that can support the understandin
   ```
 
 ### Command Interaction
-- Image understanding, using `--image-file`:
+- Image understanding, using `--image-file`.
+- If the VRAM memory is less than 20GB, try using `--load-8bit`.
 
   ```bash
   # Image Understanding
