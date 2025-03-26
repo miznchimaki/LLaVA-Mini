@@ -1560,6 +1560,7 @@ def train(attn_implementation=None):
                 **bnb_model_from_pretrained_args
             )
         else:
+            # TODO: Later
             model = LlavaMiniLlamaForCausalLM.from_pretrained(
                 model_args.model_name_or_path,
                 cache_dir=training_args.cache_dir,
@@ -1655,8 +1656,8 @@ def train(attn_implementation=None):
             conversation_lib.default_conversation = conversation_lib.conv_templates["vicuna_v1"]
     # print("conv:",conversation_lib.default_conversation )
 
-
     if model_args.vision_tower is not None:
+        # TODO: Now here
         model.get_model().initialize_vision_modules(
             model_args=model_args,
             fsdp=training_args.fsdp
@@ -1721,6 +1722,7 @@ def train(attn_implementation=None):
                     if training_args.bf16 and module.weight.dtype == torch.float32:
                         module = module.to(torch.bfloat16)
 
+    # TODO: Now here
     data_module = make_supervised_data_module(tokenizer=tokenizer,
                                               data_args=data_args)
     

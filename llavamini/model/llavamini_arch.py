@@ -185,13 +185,14 @@ class LlavaMiniMetaModel:
                     torch.empty(config.hidden_size, dtype=self.dtype)
                 )
 
-        self.init_build_compressor=False
-        if hasattr(config,'compressor_size'):
+        self.init_build_compressor = False
+        if hasattr(config, 'compressor_size'):
             self.build_compressor(config)
-            self.init_build_compressor=True
+            self.init_build_compressor = True
 
-    def build_compressor(self,config):
-        self.prefusion_layer_num= getattr(config,'prefusion_layer_num', 4)
+    # TODO: Now here
+    def build_compressor(self, config):
+        self.prefusion_layer_num= getattr(config, 'prefusion_layer_num', 4)
 
         self.prefusion_layers=nn.ModuleList([LlamaDecoderLayer(self.base_model.config,layer_idx=i) for i in range(self.prefusion_layer_num)])
         if self.base_model.device.type != 'meta':
@@ -225,7 +226,7 @@ class LlavaMiniMetaModel:
 
         if not self.init_build_compressor:
             self.build_compressor(model_args)
-            self.init_build_compressor=True
+            self.init_build_compressor = True
 
         if self.get_vision_tower() is None:
             vision_tower = build_vision_tower(model_args)
@@ -275,19 +276,19 @@ class LlavaMiniMetaModel:
 
             if 'base_model.model.model.prefusion_layers.0.self_attn.q_proj.weight' in mm_projector_weights.keys():
                 for name, module in self.spatial_w_text_projector.named_parameters():
-                    module.data=mm_projector_weights[f"base_model.model.model.prefusion_layers.{name}"].data.type_as(module.data)
+                    module.data = mm_projector_weights[f"base_model.model.model.prefusion_layers.{name}"].data.type_as(module.data)
                     # module.requires_grad = False
-                self.load_spatial_w_text_projector=True
+                self.load_spatial_w_text_projector = True
                 print("load pretrained prefusion_layers")
 
         if not self.load_prefusion_layers:
             if getattr(model_args, 'pretrain_prefusion', None):
                 model_weights = torch.load(model_args.pretrain_prefusion, map_location='cpu')
                 for name, module in self.prefusion_layers.named_parameters():
-                    module.data=model_weights[f"{name}"].data.type_as(module.data)
+                    module.data = model_weights[f"{name}"].data.type_as(module.data)
                     module.requires_grad = True
                 print(f"load pretrain_prefusion from {model_args.pretrain_prefusion}")
-                self.load_prefusion_layers=True
+                self.load_prefusion_layers = True
 
 
 def unpad_image(tensor, original_size):
