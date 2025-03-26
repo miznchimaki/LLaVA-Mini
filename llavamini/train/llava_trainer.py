@@ -24,12 +24,13 @@ from transformers.trainer_pt_utils import get_length_grouped_indices as get_leng
 from transformers.trainer_pt_utils import AcceleratorConfig
 from typing import List, Optional
 
+
 if is_accelerate_available():
     from accelerate import Accelerator, skip_first_batches, InitProcessGroupKwargs
 
+
 if is_datasets_available():
     import datasets
-
 
 
 def maybe_zero_3(param, ignore_status=False, name=None):
@@ -230,6 +231,7 @@ class LLaVATrainer(Trainer):
         dataloader = self.accelerator.prepare(DataLoader(train_dataset, **dataloader_params))
 
         return dataloader
+
     def create_optimizer(self):
         """
         Setup the optimizer.

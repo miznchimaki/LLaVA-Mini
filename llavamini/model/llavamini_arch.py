@@ -32,6 +32,7 @@ from llavamini.mm_utils import get_anyres_image_grid_shape
 from transformers.models.llama.modeling_llama import LlamaDecoderLayer
 from transformers.modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
 
+
 def get_abs_pos(abs_pos, tgt_size):
     # abs_pos: L, C
     # tgt_size: M
@@ -49,6 +50,7 @@ def get_abs_pos(abs_pos, tgt_size):
         ).permute(0, 2, 3, 1).flatten(0, 2).to(dtype=dtype)
     else:
         return abs_pos
+
 
 # https://github.com/facebookresearch/mae/blob/efb2a8062c206524e35e47d04501ed4f544c0ae8/util/pos_embed.py#L20
 def get_2d_sincos_pos_embed(embed_dim, grid_size, cls_token=False):
@@ -138,7 +140,6 @@ class Resampler(nn.Module):
         nn.init.constant_(self.ln_q.weight, 1.0)
         nn.init.constant_(self.ln_kv.bias, 0)
         nn.init.constant_(self.ln_kv.weight, 1.0)
-        
 
     def _init_weights(self, m):
         if isinstance(m, nn.Linear):
@@ -148,6 +149,7 @@ class Resampler(nn.Module):
         elif isinstance(m, nn.LayerNorm):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
+
     def init_weights(self):
         self.query.data.normal_(mean=0.0, std=0.02)
         nn.init.constant_(self.ln_q.bias, 0)
@@ -168,6 +170,7 @@ class Resampler(nn.Module):
     def _repeat(self, query, N: int):
         return query.unsqueeze(1).repeat(1, N, 1)
 
+
 class LlavaMiniMetaModel:
 
     def __init__(self, config):
@@ -181,7 +184,7 @@ class LlavaMiniMetaModel:
                 self.image_newline = nn.Parameter(
                     torch.empty(config.hidden_size, dtype=self.dtype)
                 )
-                
+
         self.init_build_compressor=False
         if hasattr(config,'compressor_size'):
             self.build_compressor(config)
@@ -189,11 +192,11 @@ class LlavaMiniMetaModel:
 
     def build_compressor(self,config):
         self.prefusion_layer_num= getattr(config,'prefusion_layer_num', 4)
-        
+
         self.prefusion_layers=nn.ModuleList([LlamaDecoderLayer(self.base_model.config,layer_idx=i) for i in range(self.prefusion_layer_num)])
         if self.base_model.device.type != 'meta':
             self.prefusion_layers.to(self.base_model.device).to(self.base_model.dtype)
-            
+
         self.compressor_size= getattr(config,'compressor_size', 2)
         self.compressor=Resampler(
             grid_size=self.compressor_size,
@@ -204,8 +207,6 @@ class LlavaMiniMetaModel:
             self.compressor.to(self.base_model.device).to(self.base_model.dtype)
         print("#Vision Tokens:",self.compressor_size*self.compressor_size)
         self.load_prefusion_layers=False
-
-
 
     def get_vision_tower(self):
         vision_tower = getattr(self, 'vision_tower', None)
@@ -338,14 +339,12 @@ class LlavaMiniMetaForCausalLM(ABC):
         if modal=='video': 
             # Batch operations on video frames can further improve efficiency and will be implemented in the future.
             pass
-
         else:
             all_text_embedding=self.get_input_embeddings()(input_ids.clamp(min=0)).detach()
             input_ids=input_ids*(labels==-100).int() if labels is not None else input_ids
             padding_mask=(input_ids<=0)
-            
-            text_embedding=all_text_embedding
 
+            text_embedding=all_text_embedding
             bsz,parts,rgb,height,width=images.size()
 
             if parts==1:
@@ -360,7 +359,7 @@ class LlavaMiniMetaForCausalLM(ABC):
 
                 image_features=clip_image_features
                 global_image_features=clip_image_features
-                
+
                 compressed_image_features,attn=self.get_model().compressor(image_features)
 
                 compressed_image_features=self.get_model().mm_projector(compressed_image_features)
@@ -368,7 +367,6 @@ class LlavaMiniMetaForCausalLM(ABC):
 
                 x=torch.cat([global_image_features,compressed_image_features,text_embedding],dim=1)
                 mask=torch.cat((torch.zeros((padding_mask.size(0),global_image_features.size(1)+compressed_image_features.size(1)),device=padding_mask.device).bool(),padding_mask),dim=1)
-
             else:
                 # high resolution
                 images=images.view(bsz*parts,rgb,height,width)
@@ -379,12 +377,12 @@ class LlavaMiniMetaForCausalLM(ABC):
                 hd_ratio=int(math.sqrt(parts-1))
                 org_grid=int(math.sqrt(spa_len))
                 split_ratio=1
-            
+
                 hd_image_features=clip_image_features[:,:hd_ratio*hd_ratio].view(bsz,hd_ratio,hd_ratio,org_grid,org_grid,d_im).transpose(2,3).reshape(bsz,hd_ratio*org_grid,hd_ratio*org_grid,d_im)
                 hd_image_features=hd_image_features.view(bsz,split_ratio,hd_ratio*org_grid//split_ratio,split_ratio,hd_ratio*org_grid//split_ratio,d_im).transpose(2,3).reshape(bsz*split_ratio*split_ratio,-1,d_im)
 
                 global_image_features=clip_image_features[:,-1]
-                
+
                 compressed_image_features,attn=self.get_model().compressor(hd_image_features)
 
                 compressed_image_features=self.get_model().mm_projector(compressed_image_features)
@@ -401,10 +399,9 @@ class LlavaMiniMetaForCausalLM(ABC):
                 attention_mask=(~mask).int()
             else: 
                 attention_mask=_prepare_4d_causal_attention_mask(~mask, (x.size(0), x.size(1)), x, 0)
-            
+
             position_ids = (~mask).int().long().cumsum(-1) - 1
             position_ids.masked_fill_((~mask).int() == 0, 1)
-            
 
             # modality pre-fusion
             for layer in self.get_model().prefusion_layers:
@@ -413,10 +410,8 @@ class LlavaMiniMetaForCausalLM(ABC):
             fusion_text_features=x[:,-1*input_ids.size(1):,:]
             compressed_image_features=x[:,-1*input_ids.size(1)-1*compressed_image_features.size(1):-1*input_ids.size(1),:]
             fusion_text_features=fusion_text_features*(~padding_mask).unsqueeze(-1).int()+all_text_embedding*padding_mask.unsqueeze(-1)
-            
-            return compressed_image_features,fusion_text_features
 
-    
+            return compressed_image_features,fusion_text_features
 
     def prepare_inputs_labels_for_multimodal(
         self, input_ids, position_ids, attention_mask, past_key_values, labels,
@@ -443,8 +438,6 @@ class LlavaMiniMetaForCausalLM(ABC):
                         text_features_sum=text_features_sum+frame_text_features.float()
                     image_features.append(torch.cat(image_features_list,dim=1).squeeze(0))
                     text_features.append((text_features_sum/temporal_len).squeeze(0).type_as(frame_text_features))
-
-
                 else:
                     image_feature,text_feature=self.encode_images_mini(images[i].unsqueeze(0),input_ids[i:i+1],labels[i:i+1] if labels is not None else None)
                     image_features.append(image_feature.squeeze(0))
@@ -462,10 +455,8 @@ class LlavaMiniMetaForCausalLM(ABC):
                         text_features_sum=text_features_sum+frame_text_features.float()
                 image_features=torch.cat(image_features_list,dim=1).requires_grad_()
                 text_features=(text_features_sum/temporal_len).type_as(frame_text_features).requires_grad_()
-
             else:
                 image_features,text_features = self.encode_images_mini(images,input_ids=input_ids,labels=labels)
-
 
         # TODO: image start / end is not implemented here to support pretraining.
         if getattr(self.config, 'tune_mm_mlp_adapter', False) and getattr(self.config, 'mm_use_im_start_end', False):
@@ -486,7 +477,6 @@ class LlavaMiniMetaForCausalLM(ABC):
             position_ids = torch.arange(0, input_ids.shape[1], dtype=torch.long, device=input_ids.device)
         if labels is None:
             labels = torch.full_like(input_ids, IGNORE_INDEX)
-        
 
         # remove the padding using attention_mask -- FIXME
         _input_ids = input_ids
@@ -576,7 +566,6 @@ class LlavaMiniMetaForCausalLM(ABC):
                         raise ValueError("new_labels_padded error")
                     attention_mask[i, :cur_len] = True
                     position_ids[i, :cur_len] = torch.arange(0, cur_len, dtype=position_ids.dtype, device=position_ids.device)
-
         new_input_embeds = torch.stack(new_input_embeds_padded, dim=0)
 
         if _labels is None:
@@ -593,7 +582,6 @@ class LlavaMiniMetaForCausalLM(ABC):
             position_ids = None
 
         return None, position_ids, attention_mask, past_key_values, new_input_embeds, new_labels
-
 
     def initialize_vision_tokenizer(self, model_args, tokenizer):
         if model_args.mm_use_im_patch_token:

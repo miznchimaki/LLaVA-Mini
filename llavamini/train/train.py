@@ -17,12 +17,12 @@
 import os
 import copy
 from dataclasses import dataclass, field
+import math
 import json
 import logging
 import pathlib
 from typing import Dict, Optional, Sequence, List
 
-import pickle
 import torch
 import random
 import yaml
@@ -126,7 +126,6 @@ class TrainingArguments(transformers.TrainingArguments):
     lora_bias: str = "none"
     mm_projector_lr: Optional[float] = None
     group_by_modality_length: bool = field(default=False)
-    
 
 
 def maybe_zero_3(param, ignore_status=False, name=None):
@@ -251,7 +250,6 @@ def save_param_info(model,output_dir):
             f.write(f"{name}: Size={size}, {'Trainable' if requires_grad else 'Frozen'}\n")
 
 
-
 def smart_tokenizer_and_embedding_resize(
     special_tokens_dict: Dict,
     tokenizer: transformers.PreTrainedTokenizer,
@@ -361,6 +359,7 @@ def preprocess_multimodal(
         idx+=1
     return sources
 
+
 def preprocess_multimodal_video(
     sources: Sequence[str],
     data_args: DataArguments
@@ -382,7 +381,7 @@ def preprocess_multimodal_video(
             if data_args.mm_use_im_start_end:
                 replace_token = DEFAULT_IM_START_TOKEN + replace_token + DEFAULT_IM_END_TOKEN
             sentence["value"] = sentence["value"].replace(DEFAULT_VIDEO_TOKEN, replace_token)
-        idx=1
+        idx = 1
     return sources
 
 
@@ -468,7 +467,6 @@ def preprocess_llama_2(
     )
 
 
-
 def preprocess_llama3(
     sources,
     tokenizer: transformers.PreTrainedTokenizer,
@@ -492,7 +490,6 @@ def preprocess_llama3(
         conversations.append(conv.get_prompt())
 
     # Tokenize conversations
-
     if has_image:
         input_ids = torch.stack(
             [tokenizer_image_token(prompt, tokenizer, return_tensors='pt') for prompt in conversations], dim=0)
@@ -540,8 +537,6 @@ def preprocess_llama3(
             if i > 0:
                 # round_len -= 1
                 instruction_len -= 1
-            
-            
 
             target[cur_len: cur_len + instruction_len] = IGNORE_INDEX
 
@@ -585,7 +580,6 @@ def preprocess_llama_3(
         conversations.append(conv.get_prompt())
 
     # Tokenize conversations
-
     if has_image:
         input_ids = torch.stack([tokenizer_image_token(prompt, tokenizer, return_tensors='pt') for prompt in conversations], dim=0)
     else:
@@ -605,7 +599,6 @@ def preprocess_llama_3(
     assert conv.sep_style == conversation_lib.SeparatorStyle.LLAMA_3
 
     # Mask targets
-
     sep= '<|start_header_id|>' + conv.roles[1] + '<|end_header_id|>' + '\n\n'
     #sep = conv.sep + conv.roles[1] + ": "
     for conversation, target in zip(conversations, targets):
@@ -655,6 +648,7 @@ def preprocess_llama_3(
         input_ids=input_ids,
         labels=targets,
     )
+
 
 def preprocess_llama_3_1(
         sources,
@@ -1001,6 +995,7 @@ def preprocess(
 
     return dict(input_ids=input_ids, labels=targets)
 
+
 def get_seq_frames(total_num_frames, desired_num_frames):
     seg_size = float(total_num_frames - 1) / desired_num_frames
     seq = []
@@ -1010,6 +1005,7 @@ def get_seq_frames(total_num_frames, desired_num_frames):
         seq.append((start + end) // 2)
 
     return seq
+
 
 class LazySupervisedDataset(Dataset):
     """Dataset for supervised fine-tuning."""
