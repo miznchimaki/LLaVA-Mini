@@ -91,7 +91,7 @@ def get_1d_sincos_pos_embed_from_grid(embed_dim, pos):
     assert embed_dim % 2 == 0
     omega = np.arange(embed_dim // 2, dtype=np.float32)
     omega /= embed_dim / 2.
-    omega = 1. / 10000**omega  # (D/2,)
+    omega = 1. / 10000 ** omega  # (D/2,)
 
     pos = pos.reshape(-1)  # (M,)
     out = np.einsum('m,d->md', pos, omega)  # (M, D/2), outer product
@@ -133,7 +133,7 @@ class Resampler(nn.Module):
         else:
             self.kv_proj = nn.Identity()
 
-        self.attn = nn.MultiheadAttention(self.embed_dim, self.num_heads,batch_first=True)
+        self.attn = nn.MultiheadAttention(self.embed_dim, self.num_heads, batch_first=True)
         self.ln_q = norm_layer(embed_dim)
         self.ln_kv = norm_layer(embed_dim)
         nn.init.constant_(self.ln_q.bias, 0)
@@ -159,12 +159,13 @@ class Resampler(nn.Module):
 
     def forward(self, x, attn_mask=None,text=None):
         pos_embed = get_abs_pos(self.pos_embed, x.size(1)).type_as(x)
-        Q=self.query
+        Q = self.query
         x = self.kv_proj(x)
         x = self.ln_kv(x)
         N = x.shape[1]
         Q = self.ln_q(Q)
-        out,attn =self.attn((Q + self.pos_embed.type_as(x)).unsqueeze(0).expand(x.size(0),Q.size(0),Q.size(1)),x + pos_embed.unsqueeze(0).type_as(x), x,attn_mask=attn_mask)
+        out,attn = self.attn((Q + self.pos_embed.type_as(x)).unsqueeze(0).expand(x.size(0), Q.size(0), Q.size(1)), x + pos_embed.unsqueeze(0).type_as(x), 
+                             x, attn_mask=attn_mask)
         return out,attn
 
     def _repeat(self, query, N: int):
@@ -190,11 +191,10 @@ class LlavaMiniMetaModel:
             self.build_compressor(config)
             self.init_build_compressor = True
 
-    # TODO: Now here
     def build_compressor(self, config):
         self.prefusion_layer_num= getattr(config, 'prefusion_layer_num', 4)
 
-        self.prefusion_layers=nn.ModuleList([LlamaDecoderLayer(self.base_model.config,layer_idx=i) for i in range(self.prefusion_layer_num)])
+        self.prefusion_layers=nn.ModuleList([LlamaDecoderLayer(self.base_model.config, layer_idx=i) for i in range(self.prefusion_layer_num)])
         if self.base_model.device.type != 'meta':
             self.prefusion_layers.to(self.base_model.device).to(self.base_model.dtype)
 
@@ -206,8 +206,8 @@ class LlavaMiniMetaModel:
         )
         if self.base_model.device.type != 'meta':
             self.compressor.to(self.base_model.device).to(self.base_model.dtype)
-        print("#Vision Tokens:",self.compressor_size*self.compressor_size)
-        self.load_prefusion_layers=False
+        print("#Vision Tokens:",self.compressor_size * self.compressor_size)
+        self.load_prefusion_layers = False
 
     def get_vision_tower(self):
         vision_tower = getattr(self, 'vision_tower', None)
