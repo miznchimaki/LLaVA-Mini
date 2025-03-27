@@ -1097,12 +1097,10 @@ class LazySupervisedDataset(Dataset):
                         # Associate each item with the corresponding image folder
                         item['folder'] = image_folder
                     self.list_data_dict.extend(data_dict)  # Append data from each file to the list
-        
-        
-        print("DATA SIZE:",len(self.list_data_dict))
-        self.resolution_ratio=data_args.resolution_ratio
-        print(f"****** Resolution_ratio = {self.resolution_ratio} ******")
 
+        print("DATA SIZE:",len(self.list_data_dict))
+        self.resolution_ratio = data_args.resolution_ratio
+        print(f"****** Resolution_ratio = {self.resolution_ratio} ******")
 
     def __len__(self):
         return len(self.list_data_dict)
@@ -1125,13 +1123,13 @@ class LazySupervisedDataset(Dataset):
             elif 'video' in sample:
                 cur_len = -cur_len
             else:
-                cur_len = -1*cur_len
+                cur_len = -1 * cur_len
             # cur_len = cur_len if 'image' in sample else -cur_len
             length_list.append(cur_len)
         return length_list
-    
+
     def split_image(self, image, n=2):
-        if n==1: return [image]
+        if n == 1: return [image]
         width, height = image.size
         block_width = width // n
         block_height = height // n
@@ -1150,7 +1148,7 @@ class LazySupervisedDataset(Dataset):
 
         return blocks
 
-    def load_video_org(self,path, n_clips=1, num_frm=None):
+    def load_video_org(self, path, n_clips=1, num_frm=None):
         """
         Load video frames from a video file.
 
@@ -1170,10 +1168,9 @@ class LazySupervisedDataset(Dataset):
         # Currently, this function supports only 1 clip
         assert n_clips == 1
         fps=vr.get_avg_fps()
-        if num_frm==None :
-            num_frm=int(total_frame_num//fps)
-            num_frm=min(num_frm,8)
-
+        if num_frm == None:
+            num_frm = int(total_frame_num // fps)
+            num_frm = min(num_frm, 8)
 
         # Calculate total number of frames to extract
         total_num_frm = min(total_frame_num, num_frm)
@@ -1203,80 +1200,9 @@ class LazySupervisedDataset(Dataset):
             sources = [sources]
         assert len(sources) == 1, "Don't know why it is wrapped to a list"  # FIXME
 
-        # text_only=False
-        # if random.random()<0.5:
-        #     text_only=True
-
-
-        # if 'image' in sources[0]:
-        #     try:
-        #         image_file = self.list_data_dict[i]['image']
-        #         image_folder = self.list_data_dict[i]['folder']
-        #         processor = self.data_args.image_processor
-        #         image = Image.open(os.path.join(image_folder, image_file)).convert('RGB')
-        #         if self.data_args.image_aspect_ratio == 'pad':
-        #             def expand2square(pil_img, background_color):
-        #                 width, height = pil_img.size
-        #                 if width == height:
-        #                     return pil_img
-        #                 elif width > height:
-        #                     result = Image.new(pil_img.mode, (width, width), background_color)
-        #                     result.paste(pil_img, (0, (width - height) // 2))
-        #                     return result
-        #                 else:
-        #                     result = Image.new(pil_img.mode, (height, height), background_color)
-        #                     result.paste(pil_img, ((height - width) // 2, 0))
-        #                     return result
-        #             image = expand2square(image, tuple(int(x*255) for x in processor.image_mean))
-        #             # image = processor.preprocess(image, return_tensors='pt')['pixel_values'][0]
-        #         # else:
-        #             # image = processor.preprocess(image, return_tensors='pt')['pixel_values'][0]
-        #         N=self.resolution_ratio
-        #         image=self.split_image(image,n=N)
-        #         image = processor.preprocess(image, return_tensors='pt')['pixel_values']
-        #     except:
-        #         print(self.list_data_dict[i])
-        #         crop_size = self.data_args.image_processor.crop_size
-        #         N=self.resolution_ratio
-        #         if N==1:
-        #             image = torch.zeros(1,3, crop_size['height'], crop_size['width'])
-        #         else:
-        #             image = torch.zeros(N**2+1,3, crop_size['height'], crop_size['width'])
-
-
-
-        #     sources = preprocess_multimodal(
-        #         copy.deepcopy([e["conversations"] for e in sources]),
-        #         self.data_args)
-        # elif 'video' in sources[0]:
-        #     try:
-        #         image_file = self.list_data_dict[i]['video']
-        #         image_folder = self.list_data_dict[i]['folder']
-        #         video_frames = self.load_video_org(os.path.join(image_folder, image_file),num_frm=8)
-        #         temporal_len=len(video_frames)
-        #         processor = self.data_args.image_processor
-        #         N=self.resolution_ratio
-        #         images=[]
-        #         for video_frame in video_frames:
-        #             images.extend(self.split_image(video_frame,n=N))
-
-        #         images = processor.preprocess(images, return_tensors='pt')['pixel_values']
-        #         N2_x_temporal,rgb,height,width=images.size()
-        #         image=images.view(temporal_len,-1,rgb,height,width)
-
-        #     except:
-        #         print(self.list_data_dict[i])
-        #         crop_size = self.data_args.image_processor.crop_size
-        #         image = torch.zeros(8,1,3, crop_size['height'], crop_size['width'])
-
-        #     sources = preprocess_multimodal_video(
-        #         copy.deepcopy([e["conversations"] for e in sources]),
-        #         self.data_args)
-        # else:
-        #     print("NO IMAGE")
-        #     sources = copy.deepcopy([e["conversations"] for e in sources])
-        valid=False
-        data_dict=None
+        valid = False
+        data_dict = None
+        # TODO: Now here
         while not valid:
             try:
             # if True:
@@ -1334,21 +1260,12 @@ class LazySupervisedDataset(Dataset):
                         crop_size = self.data_args.image_processor.crop_size
                         image = torch.zeros(8,1,3, crop_size['height'], crop_size['width'])
 
-        
                     sources = preprocess_multimodal_video(
                         copy.deepcopy([e["conversations"] for e in sources]),
                         self.data_args)
-                    
+
                 else:
-                    # print("NO IMAGE")
-                    # print(sources[0])
-                    # if isinstance(sources[0], list):
-                    #     sources=[sources[0][0]]
-                    # sources = copy.deepcopy([e["conversations"] for e in sources])
-                    # sources = copy.deepcopy([e["conversations"] for e in sources])
                     sources = copy.deepcopy([self.list_data_dict[i]["conversations"]])
-                    # assert False
-                    # assert False
                 data_dict = preprocess(
                     sources,
                     self.tokenizer,
@@ -1361,94 +1278,6 @@ class LazySupervisedDataset(Dataset):
                 # assert False
                 i=random.randint(0, len(self.list_data_dict))
 
-
-        '''
-        valid=False
-        while not valid:
-            try:
-                if 'image' in sources[0]:
-                    
-                    image_file = self.list_data_dict[i]['image']
-                    image_folder = self.list_data_dict[i]['folder']
-                    processor = self.data_args.image_processor
-                    image = Image.open(os.path.join(image_folder, image_file)).convert('RGB')
-                    if self.data_args.image_aspect_ratio == 'pad':
-                        def expand2square(pil_img, background_color):
-                            width, height = pil_img.size
-                            if width == height:
-                                return pil_img
-                            elif width > height:
-                                result = Image.new(pil_img.mode, (width, width), background_color)
-                                result.paste(pil_img, (0, (width - height) // 2))
-                                return result
-                            else:
-                                result = Image.new(pil_img.mode, (height, height), background_color)
-                                result.paste(pil_img, ((height - width) // 2, 0))
-                                return result
-                        image = expand2square(image, tuple(int(x*255) for x in processor.image_mean))
-                        # image = processor.preprocess(image, return_tensors='pt')['pixel_values'][0]
-                    # else:
-                        # image = processor.preprocess(image, return_tensors='pt')['pixel_values'][0]
-                    N=self.resolution_ratio
-                    image=self.split_image(image,n=N)
-                    image = processor.preprocess(image, return_tensors='pt')['pixel_values']
-                    valid=True
-
-                    sources = preprocess_multimodal(
-                        copy.deepcopy([e["conversations"] for e in sources]),
-                        self.data_args)
-                elif 'video' in sources[0]:
-                    image_file = self.list_data_dict[i]['video']
-                    image_folder = self.list_data_dict[i]['folder']
-                    video_frames = self.load_video_org(os.path.join(image_folder, image_file),num_frm=8)
-                    processor = self.data_args.image_processor
-
-
-
-                    # processor = self.data_args.image_processor
-                    # image = Image.open(os.path.join(image_folder, image_file)).convert('RGB')
-                    # if self.data_args.image_aspect_ratio == 'pad':
-                    #     def expand2square(pil_img, background_color):
-                    #         width, height = pil_img.size
-                    #         if width == height:
-                    #             return pil_img
-                    #         elif width > height:
-                    #             result = Image.new(pil_img.mode, (width, width), background_color)
-                    #             result.paste(pil_img, (0, (width - height) // 2))
-                    #             return result
-                    #         else:
-                    #             result = Image.new(pil_img.mode, (height, height), background_color)
-                    #             result.paste(pil_img, ((height - width) // 2, 0))
-                    #             return result
-                    #     image = expand2square(image, tuple(int(x*255) for x in processor.image_mean))
-                    #     # image = processor.preprocess(image, return_tensors='pt')['pixel_values'][0]
-                    # # else:
-                    #     # image = processor.preprocess(image, return_tensors='pt')['pixel_values'][0]
-                    N=self.resolution_ratio
-                    images=[]
-                    for video_frame in video_frames:
-                        images.extend(self.split_image(video_frame,n=N))
-
-                    images = processor.preprocess(images, return_tensors='pt')['pixel_values']
-                    N2_x_temporal,rgb,height,width=images.size()
-                    image=images.view(N2_x_temporal,-1,rgb,height,width)
-
-
-                    
-                    valid=True
-                    
-
-                    sources = preprocess_multimodal_video(
-                        copy.deepcopy([e["conversations"] for e in sources]),
-                        self.data_args)
-                else:
-                    print(sources)
-                    sources = copy.deepcopy([e["conversations"] for e in sources])
-
-            except:
-                print(self.list_data_dict[i])
-                i=random.randint(0, len(self.list_data_dict))
-        '''
         if data_dict is None:
             data_dict = preprocess(
                 sources,
@@ -1657,7 +1486,6 @@ def train(attn_implementation=None):
     # print("conv:",conversation_lib.default_conversation )
 
     if model_args.vision_tower is not None:
-        # TODO: Now here
         model.get_model().initialize_vision_modules(
             model_args=model_args,
             fsdp=training_args.fsdp
