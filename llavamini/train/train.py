@@ -1227,12 +1227,9 @@ class LazySupervisedDataset(Dataset):
                                 result = Image.new(pil_img.mode, (height, height), background_color)
                                 result.paste(pil_img, ((height - width) // 2, 0))
                                 return result
-                        image = expand2square(image, tuple(int(x*255) for x in processor.image_mean))
-                        # image = processor.preprocess(image, return_tensors='pt')['pixel_values'][0]
-                    # else:
-                        # image = processor.preprocess(image, return_tensors='pt')['pixel_values'][0]
-                    N=self.resolution_ratio
-                    image=self.split_image(image,n=N)
+                        image = expand2square(image, tuple(int(x * 255) for x in processor.image_mean))
+                    N = self.resolution_ratio
+                    image=self.split_image(image, n=N)
                     image = processor.preprocess(image, return_tensors='pt')['pixel_values']
 
                     sources = preprocess_multimodal(
@@ -1243,17 +1240,17 @@ class LazySupervisedDataset(Dataset):
                     try:
                         image_file = self.list_data_dict[i]['video']
                         image_folder = self.list_data_dict[i]['folder']
-                        video_frames = self.load_video_org(os.path.join(image_folder, image_file),num_frm=8)
-                        temporal_len=len(video_frames)
+                        video_frames = self.load_video_org(os.path.join(image_folder, image_file), num_frm=8)
+                        temporal_len = len(video_frames)
                         processor = self.data_args.image_processor
-                        N=self.resolution_ratio
+                        N = self.resolution_ratio
                         images=[]
                         for video_frame in video_frames:
                             images.extend(self.split_image(video_frame,n=N))
 
                         images = processor.preprocess(images, return_tensors='pt')['pixel_values']
-                        N2_x_temporal,rgb,height,width=images.size()
-                        image=images.view(temporal_len,-1,rgb,height,width)
+                        N2_x_temporal, rgb, height, width = images.size()
+                        image = images.view(temporal_len, -1, rgb, height, width)
                     except:
                         
                         print(self.list_data_dict[i])
@@ -1269,8 +1266,8 @@ class LazySupervisedDataset(Dataset):
                 data_dict = preprocess(
                     sources,
                     self.tokenizer,
-                    has_image=('image' in self.list_data_dict[i]))
-                valid=True
+                    has_image = ('image' in self.list_data_dict[i]))
+                valid = True
                 
             except Exception as e:
                 print(f"Error: {e}")
