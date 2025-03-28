@@ -556,6 +556,7 @@ def preprocess_llama3(
     )
 
 
+# TODO: Now here
 def preprocess_llama_3(
         sources,
     tokenizer: transformers.PreTrainedTokenizer,
@@ -941,7 +942,6 @@ def preprocess_plain(
     return dict(input_ids=input_ids, labels=targets)
 
 
-# TODO: Now here
 def preprocess(
     sources: Sequence[str],
     tokenizer: transformers.PreTrainedTokenizer,
@@ -1385,7 +1385,7 @@ def train(attn_implementation=None):
                 **bnb_model_from_pretrained_args
             )
         else:
-            # TODO: Later
+            # TODO: Now here
             model = LlavaMiniLlamaForCausalLM.from_pretrained(
                 model_args.model_name_or_path,
                 cache_dir=training_args.cache_dir,
