@@ -576,7 +576,6 @@ def preprocess_llama_3(
             role = roles[sentence["from"]]
             assert role == conv.roles[j % 2], f"{i}"
             conv.append_message(role, sentence["value"])
-        # TODO: Now here
         conversations.append(conv.get_prompt())
 
     # Tokenize conversations
@@ -599,7 +598,7 @@ def preprocess_llama_3(
     assert conv.sep_style == conversation_lib.SeparatorStyle.LLAMA_3
 
     # Mask targets
-    sep= '<|start_header_id|>' + conv.roles[1] + '<|end_header_id|>' + '\n\n'
+    sep = '<|start_header_id|>' + conv.roles[1] + '<|end_header_id|>' + '\n\n'
     #sep = conv.sep + conv.roles[1] + ": "
     for conversation, target in zip(conversations, targets):
         # total_len = int(target.ne(tokenizer.pad_token_id).sum())
