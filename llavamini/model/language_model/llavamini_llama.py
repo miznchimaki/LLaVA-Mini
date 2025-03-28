@@ -11,8 +11,6 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-
-
 from typing import List, Optional, Tuple, Union
 
 import torch
@@ -25,7 +23,7 @@ from transformers.modeling_outputs import CausalLMOutputWithPast
 from transformers.generation.utils import GenerateOutput
 
 from ..llavamini_arch import LlavaMiniMetaModel, LlavaMiniMetaForCausalLM
-import time
+
 
 class LlavaMiniConfig(LlamaConfig):
     model_type = "llava_mini_llama"
@@ -38,6 +36,7 @@ class LlavaMiniLlamaModel(LlavaMiniMetaModel, LlamaModel):
         super(LlavaMiniLlamaModel, self).__init__(config)
 
 
+# TODO: Now here
 class LlavaMiniLlamaForCausalLM(LlamaForCausalLM, LlavaMiniMetaForCausalLM):
     config_class = LlavaMiniConfig
 
@@ -152,6 +151,7 @@ class LlavaMiniLlamaForCausalLM(LlamaForCausalLM, LlavaMiniMetaForCausalLM):
         if image_sizes is not None:
             inputs['image_sizes'] = image_sizes
         return inputs
+
 
 AutoConfig.register("llava_mini_llama", LlavaMiniConfig)
 AutoModelForCausalLM.register(LlavaMiniConfig, LlavaMiniLlamaForCausalLM)
