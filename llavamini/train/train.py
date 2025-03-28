@@ -556,7 +556,6 @@ def preprocess_llama3(
     )
 
 
-# TODO: Now here
 def preprocess_llama_3(
         sources,
     tokenizer: transformers.PreTrainedTokenizer,
@@ -577,6 +576,7 @@ def preprocess_llama_3(
             role = roles[sentence["from"]]
             assert role == conv.roles[j % 2], f"{i}"
             conv.append_message(role, sentence["value"])
+        # TODO: Now here
         conversations.append(conv.get_prompt())
 
     # Tokenize conversations

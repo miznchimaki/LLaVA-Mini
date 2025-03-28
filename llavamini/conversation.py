@@ -111,6 +111,7 @@ class Conversation:
                     chat_template_messages.append({"role": role, "content": message})
 
             # print(chat_template_messages)
+            # TODO: Now here
             return self.tokenizer.apply_chat_template(chat_template_messages, tokenize=False, add_generation_prompt=False)
         
         elif self.sep_style == SeparatorStyle.LLAMA_3_1:
