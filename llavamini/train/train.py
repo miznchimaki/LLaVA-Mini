@@ -29,7 +29,7 @@ import yaml
 import transformers
 import tokenizers
 
-from llavamini.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN,DEFAULT_VIDEO_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
+from llavamini.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_VIDEO_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
 from torch.utils.data import Dataset
 from llavamini.train.llava_trainer import LLaVATrainer
 
@@ -236,7 +236,8 @@ def safe_save_model_for_hf_trainer(trainer: transformers.Trainer,
         del state_dict
         trainer._save(output_dir, state_dict=cpu_state_dict)  # noqa
 
-def save_param_info(model,output_dir):
+
+def save_param_info(model, output_dir):
     parameters_info = []
     for name, param in model.named_parameters():
         parameters_info.append((name, param.size(), param.requires_grad))
@@ -369,7 +370,6 @@ def preprocess_multimodal_video(
         return sources
 
     for source in sources:
-        idx=0
         for sentence in source:
             if DEFAULT_VIDEO_TOKEN in sentence['value']:
                 sentence['value'] = sentence['value'].replace(DEFAULT_VIDEO_TOKEN, '').strip()
@@ -381,7 +381,6 @@ def preprocess_multimodal_video(
             if data_args.mm_use_im_start_end:
                 replace_token = DEFAULT_IM_START_TOKEN + replace_token + DEFAULT_IM_END_TOKEN
             sentence["value"] = sentence["value"].replace(DEFAULT_VIDEO_TOKEN, replace_token)
-        idx = 1
     return sources
 
 
@@ -942,6 +941,7 @@ def preprocess_plain(
     return dict(input_ids=input_ids, labels=targets)
 
 
+# TODO: Now here
 def preprocess(
     sources: Sequence[str],
     tokenizer: transformers.PreTrainedTokenizer,
@@ -1167,7 +1167,7 @@ class LazySupervisedDataset(Dataset):
 
         # Currently, this function supports only 1 clip
         assert n_clips == 1
-        fps=vr.get_avg_fps()
+        fps = vr.get_avg_fps()
         if num_frm == None:
             num_frm = int(total_frame_num // fps)
             num_frm = min(num_frm, 8)
@@ -1202,7 +1202,6 @@ class LazySupervisedDataset(Dataset):
 
         valid = False
         data_dict = None
-        # TODO: Now here
         while not valid:
             try:
             # if True:
@@ -1229,7 +1228,7 @@ class LazySupervisedDataset(Dataset):
                                 return result
                         image = expand2square(image, tuple(int(x * 255) for x in processor.image_mean))
                     N = self.resolution_ratio
-                    image=self.split_image(image, n=N)
+                    image = self.split_image(image, n=N)
                     image = processor.preprocess(image, return_tensors='pt')['pixel_values']
 
                     sources = preprocess_multimodal(
@@ -1244,18 +1243,18 @@ class LazySupervisedDataset(Dataset):
                         temporal_len = len(video_frames)
                         processor = self.data_args.image_processor
                         N = self.resolution_ratio
-                        images=[]
+                        images = []
                         for video_frame in video_frames:
-                            images.extend(self.split_image(video_frame,n=N))
+                            images.extend(self.split_image(video_frame, n=N))
 
                         images = processor.preprocess(images, return_tensors='pt')['pixel_values']
                         N2_x_temporal, rgb, height, width = images.size()
                         image = images.view(temporal_len, -1, rgb, height, width)
                     except:
-                        
                         print(self.list_data_dict[i])
                         crop_size = self.data_args.image_processor.crop_size
-                        image = torch.zeros(8,1,3, crop_size['height'], crop_size['width'])
+                        # 8 -> num_frames; 1 -> num_clips_each_frame; 3 -> num_channels
+                        image = torch.zeros(8, 1, 3, crop_size['height'], crop_size['width'])
 
                     sources = preprocess_multimodal_video(
                         copy.deepcopy([e["conversations"] for e in sources]),
@@ -1273,7 +1272,7 @@ class LazySupervisedDataset(Dataset):
                 print(f"Error: {e}")
                 print(self.list_data_dict[i])
                 # assert False
-                i=random.randint(0, len(self.list_data_dict))
+                i = random.randint(0, len(self.list_data_dict))
 
         if data_dict is None:
             data_dict = preprocess(
@@ -1287,16 +1286,16 @@ class LazySupervisedDataset(Dataset):
         # image exist in the data
         if 'image' in self.list_data_dict[i] or 'video' in self.list_data_dict[i]:
             data_dict['image'] = image
-        
+
         elif self.data_args.is_multimodal:
             # image does not exist in the data, but the model is multimodal
             crop_size = self.data_args.image_processor.crop_size
             # data_dict['image'] = torch.zeros(1,3, crop_size['height'], crop_size['width'])
-            N=self.resolution_ratio
-            if N==1:
-                image = torch.zeros(1,3, crop_size['height'], crop_size['width'])
+            N = self.resolution_ratio
+            if N == 1:
+                image = torch.zeros(1, 3, crop_size['height'], crop_size['width'])
             else:
-                image = torch.zeros(N**2+1,3, crop_size['height'], crop_size['width'])
+                image = torch.zeros(N ** 2 + 1, 3, crop_size['height'], crop_size['width'])
             data_dict['image'] = image
         return data_dict
 
@@ -1547,16 +1546,16 @@ def train(attn_implementation=None):
                     if training_args.bf16 and module.weight.dtype == torch.float32:
                         module = module.to(torch.bfloat16)
 
-    # TODO: Now here
     data_module = make_supervised_data_module(tokenizer=tokenizer,
                                               data_args=data_args)
-    
-    save_param_info(model,training_args.output_dir)
-    
+
+    save_param_info(model, training_args.output_dir)
+
     trainer = LLaVATrainer(model=model,
-                    tokenizer=tokenizer,
-                    args=training_args,
-                    **data_module)
+                           tokenizer=tokenizer,
+                           args=training_args,
+                           **data_module
+                          )
 
     if list(pathlib.Path(training_args.output_dir).glob("checkpoint-*")):
         trainer.train(resume_from_checkpoint=True)
