@@ -164,9 +164,9 @@ class Resampler(nn.Module):
         x = self.ln_kv(x)
         N = x.shape[1]
         Q = self.ln_q(Q)
-        out,attn = self.attn((Q + self.pos_embed.type_as(x)).unsqueeze(0).expand(x.size(0), Q.size(0), Q.size(1)), x + pos_embed.unsqueeze(0).type_as(x), 
-                             x, attn_mask=attn_mask)
-        return out,attn
+        out, attn = self.attn((Q + self.pos_embed.type_as(x)).unsqueeze(0).expand(x.size(0), Q.size(0), Q.size(1)), 
+                              x + pos_embed.unsqueeze(0).type_as(x), x, attn_mask=attn_mask)
+        return out, attn
 
     def _repeat(self, query, N: int):
         return query.unsqueeze(1).repeat(1, N, 1)
@@ -336,49 +336,50 @@ class LlavaMiniMetaForCausalLM(ABC):
         image_features = self.get_model().mm_projector(image_features)
         return image_features
 
-    def encode_images_mini(self, images,input_ids,labels=None,modal='image'):
-        if modal=='video': 
+    def encode_images_mini(self, images, input_ids, labels=None, modal='image'):
+        if modal == 'video': 
             # Batch operations on video frames can further improve efficiency and will be implemented in the future.
             pass
         else:
-            all_text_embedding=self.get_input_embeddings()(input_ids.clamp(min=0)).detach()
-            input_ids=input_ids*(labels==-100).int() if labels is not None else input_ids
-            padding_mask=(input_ids<=0)
+            all_text_embedding = self.get_input_embeddings()(input_ids.clamp(min=0)).detach()
+            input_ids = input_ids * (labels == -100).int() if labels is not None else input_ids
+            padding_mask = (input_ids <= 0)
 
-            text_embedding=all_text_embedding
-            bsz,parts,rgb,height,width=images.size()
+            text_embedding = all_text_embedding
+            bsz, parts, rgb, height, width = images.size()
 
-            if parts==1:
+            if parts == 1:
                 # standard resolution
-                images=images[:,0]
+                images = images[:, 0]
                 clip_image_features = self.get_model().get_vision_tower()(images)
-                _,spa_len,d_im=clip_image_features.size()
-                clip_image_features=clip_image_features.view(bsz,spa_len,d_im)
+                _, spa_len, d_im = clip_image_features.size()
+                clip_image_features = clip_image_features.view(bsz, spa_len, d_im)
 
-                org_grid=int(math.sqrt(spa_len))
-                split_ratio=1
+                org_grid = int(math.sqrt(spa_len))
+                split_ratio = 1
 
-                image_features=clip_image_features
-                global_image_features=clip_image_features
+                image_features = clip_image_features
+                global_image_features = clip_image_features
 
-                compressed_image_features,attn=self.get_model().compressor(image_features)
+                compressed_image_features, attn = self.get_model().compressor(image_features)
 
-                compressed_image_features=self.get_model().mm_projector(compressed_image_features)
-                global_image_features=self.get_model().mm_projector(global_image_features)
+                compressed_image_features = self.get_model().mm_projector(compressed_image_features)
+                global_image_features = self.get_model().mm_projector(global_image_features)
 
-                x=torch.cat([global_image_features,compressed_image_features,text_embedding],dim=1)
-                mask=torch.cat((torch.zeros((padding_mask.size(0),global_image_features.size(1)+compressed_image_features.size(1)),device=padding_mask.device).bool(),padding_mask),dim=1)
+                x = torch.cat([global_image_features, compressed_image_features, text_embedding], dim=1)
+                mask = torch.cat((torch.zeros((padding_mask.size(0), global_image_features.size(1) + compressed_image_features.size(1)), device=padding_mask.device).bool(), padding_mask), dim=1)
             else:
                 # high resolution
-                images=images.view(bsz*parts,rgb,height,width)
+                images = images.view(bsz * parts, rgb, height, width)
                 clip_image_features = self.get_model().get_vision_tower()(images)
-                _,spa_len,d_im=clip_image_features.size()
-                clip_image_features=clip_image_features.view(bsz,-1,spa_len,d_im)
+                _, spa_len, d_im = clip_image_features.size()
+                clip_image_features = clip_image_features.view(bsz, -1, spa_len, d_im)
 
-                hd_ratio=int(math.sqrt(parts-1))
-                org_grid=int(math.sqrt(spa_len))
-                split_ratio=1
+                hd_ratio = int(math.sqrt(parts - 1))
+                org_grid = int(math.sqrt(spa_len))
+                split_ratio = 1
 
+                # TODO: Now here
                 hd_image_features=clip_image_features[:,:hd_ratio*hd_ratio].view(bsz,hd_ratio,hd_ratio,org_grid,org_grid,d_im).transpose(2,3).reshape(bsz,hd_ratio*org_grid,hd_ratio*org_grid,d_im)
                 hd_image_features=hd_image_features.view(bsz,split_ratio,hd_ratio*org_grid//split_ratio,split_ratio,hd_ratio*org_grid//split_ratio,d_im).transpose(2,3).reshape(bsz*split_ratio*split_ratio,-1,d_im)
 
@@ -424,29 +425,32 @@ class LlavaMiniMetaForCausalLM(ABC):
 
         if type(images) is list:
             # video
-            image_features=[]
-            text_features=[]
+            image_features = []
+            text_features = []
             for i in range(len(images)):
-                if images[i].ndim==5:
+                if images[i].ndim == 5:
 
-                    image=images[i].unsqueeze(0)
-                    temporal_len=image.size(1)
+                    image = images[i].unsqueeze(0)
+                    temporal_len = image.size(1)
                     image_features_list = []
                     text_features_sum = 0
                     for frame_idx in range(temporal_len):
-                        frame_image_features,frame_text_features = self.encode_images_mini(image[:,frame_idx],input_ids[i:i+1],labels[i:i+1] if labels is not None else None)
+                        # TODO: Now here
+                        frame_image_features, frame_text_features = self.encode_images_mini(image[:, frame_idx], input_ids[i: i + 1], 
+                                                                                            labels[i: i + 1] if labels is not None else None)
                         image_features_list.append(frame_image_features)
-                        text_features_sum=text_features_sum+frame_text_features.float()
-                    image_features.append(torch.cat(image_features_list,dim=1).squeeze(0))
-                    text_features.append((text_features_sum/temporal_len).squeeze(0).type_as(frame_text_features))
+                        text_features_sum = text_features_sum + frame_text_features.float()
+                    image_features.append(torch.cat(image_features_list, dim=1).squeeze(0))
+                    text_features.append((text_features_sum / temporal_len).squeeze(0).type_as(frame_text_features))
                 else:
-                    image_feature,text_feature=self.encode_images_mini(images[i].unsqueeze(0),input_ids[i:i+1],labels[i:i+1] if labels is not None else None)
+                    image_feature, text_feature = self.encode_images_mini(images[i].unsqueeze(0), input_ids[i: i + 1], 
+                                                                          labels[i: i + 1] if labels is not None else None)
                     image_features.append(image_feature.squeeze(0))
                     text_features.append(text_feature.squeeze(0))
         else:
             # image
-            if images.ndim==6:
-                temporal_len=images.size(1)
+            if images.ndim == 6:
+                temporal_len = images.size(1)
                 image_features_list = []
                 text_features_sum = 0
                 with  torch.no_grad():

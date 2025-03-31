@@ -36,7 +36,6 @@ class LlavaMiniLlamaModel(LlavaMiniMetaModel, LlamaModel):
         super(LlavaMiniLlamaModel, self).__init__(config)
 
 
-# TODO: Now here
 class LlavaMiniLlamaForCausalLM(LlamaForCausalLM, LlavaMiniMetaForCausalLM):
     config_class = LlavaMiniConfig
 
