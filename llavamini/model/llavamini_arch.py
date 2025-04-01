@@ -343,6 +343,13 @@ class LlavaMiniMetaForCausalLM(ABC):
         else:
             all_text_embedding = self.get_input_embeddings()(input_ids.clamp(min=0)).detach()
             input_ids = input_ids * (labels == -100).int() if labels is not None else input_ids
+            # TODO: comments of mizuno
+            # TODO: padding_mask为True的那些位置,对应的含义有如下两个:
+            # TODO: (1)对应的labels不等于-100
+            # TODO: (2)对应的labels等于-100,而且对应位置的input_ids本身就<=0
+            # TODO: 但是我觉得这里不对劲,应该把上面那行代码中的labels == -100修改为labels != -100
+            # TODO: 按照我这个逻辑,padding_mask为True的位置代表的是忽略的那些tokens;
+            # TODO: 相反,padding_mask为False的位置代表的是不忽略,即文本tokens
             padding_mask = (input_ids <= 0)
 
             text_embedding = all_text_embedding
@@ -379,41 +386,42 @@ class LlavaMiniMetaForCausalLM(ABC):
                 org_grid = int(math.sqrt(spa_len))
                 split_ratio = 1
 
-                # TODO: Now here
-                hd_image_features=clip_image_features[:,:hd_ratio*hd_ratio].view(bsz,hd_ratio,hd_ratio,org_grid,org_grid,d_im).transpose(2,3).reshape(bsz,hd_ratio*org_grid,hd_ratio*org_grid,d_im)
-                hd_image_features=hd_image_features.view(bsz,split_ratio,hd_ratio*org_grid//split_ratio,split_ratio,hd_ratio*org_grid//split_ratio,d_im).transpose(2,3).reshape(bsz*split_ratio*split_ratio,-1,d_im)
+                hd_image_features = clip_image_features[:, : hd_ratio * hd_ratio].view(bsz, hd_ratio, hd_ratio, org_grid, org_grid, d_im).transpose(2, 3).reshape(bsz, hd_ratio * org_grid, hd_ratio * org_grid, d_im)
+                hd_image_features = hd_image_features.view(bsz, split_ratio, hd_ratio * org_grid // split_ratio, split_ratio, hd_ratio * org_grid // split_ratio, d_im).transpose(2, 3).reshape(bsz * split_ratio * split_ratio, -1, d_im)
 
-                global_image_features=clip_image_features[:,-1]
+                global_image_features = clip_image_features[:, -1]
 
-                compressed_image_features,attn=self.get_model().compressor(hd_image_features)
+                compressed_image_features, attn = self.get_model().compressor(hd_image_features)
 
-                compressed_image_features=self.get_model().mm_projector(compressed_image_features)
-                compressed_image_features=compressed_image_features.view(bsz,split_ratio*split_ratio,compressed_image_features.size(-2),compressed_image_features.size(-1)).reshape(bsz,-1,compressed_image_features.size(-1))
-                global_image_features=self.get_model().mm_projector(global_image_features)
+                compressed_image_features = self.get_model().mm_projector(compressed_image_features)
+                compressed_image_features = compressed_image_features.view(bsz, split_ratio * split_ratio, compressed_image_features.size(-2), compressed_image_features.size(-1)).reshape(bsz, -1, compressed_image_features.size(-1))
+                global_image_features = self.get_model().mm_projector(global_image_features)
 
-                d=global_image_features.size(-1)
-                hd_image_features_all=self.get_model().mm_projector(clip_image_features[:,:-1]).view(bsz,hd_ratio,hd_ratio,org_grid,org_grid,-1).transpose(2,3).reshape(bsz,-1,d)
+                d = global_image_features.size(-1)
+                hd_image_features_all = self.get_model().mm_projector(clip_image_features[:, :-1]).view(bsz, hd_ratio, hd_ratio, org_grid, org_grid, -1).transpose(2, 3).reshape(bsz, -1, d)
 
-                x=torch.cat([hd_image_features_all,global_image_features,compressed_image_features,text_embedding],dim=1)
-                mask=torch.cat((torch.zeros((padding_mask.size(0),hd_image_features_all.size(1)+global_image_features.size(1)+compressed_image_features.size(1)),device=padding_mask.device).bool(),padding_mask),dim=1)
+                x = torch.cat([hd_image_features_all, global_image_features, compressed_image_features, text_embedding], dim=1)
+                mask = torch.cat((torch.zeros((padding_mask.size(0), hd_image_features_all.size(1) + global_image_features.size(1) + compressed_image_features.size(1)), device=padding_mask.device).bool(), padding_mask), dim=1)
 
             if getattr(self.get_model().base_model, "_use_flash_attention_2", False) or getattr(self.get_model().base_model.config, "_attn_implementation", "") == "flash_attention_2":
-                attention_mask=(~mask).int()
+                attention_mask = (~mask).int()
             else: 
-                attention_mask=_prepare_4d_causal_attention_mask(~mask, (x.size(0), x.size(1)), x, 0)
+                attention_mask = _prepare_4d_causal_attention_mask(~mask, (x.size(0), x.size(1)), x, 0)
 
             position_ids = (~mask).int().long().cumsum(-1) - 1
             position_ids.masked_fill_((~mask).int() == 0, 1)
 
             # modality pre-fusion
+            # TODO: comments of mizuno
+            # TODO: Here is the prefusion module in LLaVA-Mini
             for layer in self.get_model().prefusion_layers:
-                x = layer(x,attention_mask=attention_mask,position_ids=position_ids)[0]
+                x = layer(x, attention_mask=attention_mask, position_ids=position_ids)[0]
 
-            fusion_text_features=x[:,-1*input_ids.size(1):,:]
-            compressed_image_features=x[:,-1*input_ids.size(1)-1*compressed_image_features.size(1):-1*input_ids.size(1),:]
-            fusion_text_features=fusion_text_features*(~padding_mask).unsqueeze(-1).int()+all_text_embedding*padding_mask.unsqueeze(-1)
+            fusion_text_features = x[:, -1 * input_ids.size(1): ,:]
+            compressed_image_features = x[:, -1 * input_ids.size(1) - 1 * compressed_image_features.size(1): -1 * input_ids.size(1), :]
+            fusion_text_features = fusion_text_features * (~padding_mask).unsqueeze(-1).int() + all_text_embedding * padding_mask.unsqueeze(-1)
 
-            return compressed_image_features,fusion_text_features
+            return compressed_image_features, fusion_text_features
 
     def prepare_inputs_labels_for_multimodal(
         self, input_ids, position_ids, attention_mask, past_key_values, labels,
@@ -435,7 +443,6 @@ class LlavaMiniMetaForCausalLM(ABC):
                     image_features_list = []
                     text_features_sum = 0
                     for frame_idx in range(temporal_len):
-                        # TODO: Now here
                         frame_image_features, frame_text_features = self.encode_images_mini(image[:, frame_idx], input_ids[i: i + 1], 
                                                                                             labels[i: i + 1] if labels is not None else None)
                         image_features_list.append(frame_image_features)
@@ -455,13 +462,13 @@ class LlavaMiniMetaForCausalLM(ABC):
                 text_features_sum = 0
                 with  torch.no_grad():
                     for frame_idx in range(temporal_len):
-                        frame_image_features,frame_text_features = self.encode_images_mini(images[:,frame_idx],input_ids=input_ids,labels=labels)
+                        frame_image_features, frame_text_features = self.encode_images_mini(images[:, frame_idx], input_ids=input_ids, labels=labels)
                         image_features_list.append(frame_image_features)
-                        text_features_sum=text_features_sum+frame_text_features.float()
-                image_features=torch.cat(image_features_list,dim=1).requires_grad_()
-                text_features=(text_features_sum/temporal_len).type_as(frame_text_features).requires_grad_()
+                        text_features_sum = text_features_sum + frame_text_features.float()
+                image_features = torch.cat(image_features_list, dim=1).requires_grad_()
+                text_features = (text_features_sum / temporal_len).type_as(frame_text_features).requires_grad_()
             else:
-                image_features,text_features = self.encode_images_mini(images,input_ids=input_ids,labels=labels)
+                image_features, text_features = self.encode_images_mini(images, input_ids=input_ids, labels=labels)
 
         # TODO: image start / end is not implemented here to support pretraining.
         if getattr(self.config, 'tune_mm_mlp_adapter', False) and getattr(self.config, 'mm_use_im_start_end', False):
@@ -485,8 +492,8 @@ class LlavaMiniMetaForCausalLM(ABC):
 
         # remove the padding using attention_mask -- FIXME
         _input_ids = input_ids
-        _labels=labels
-        _attention_mask=attention_mask
+        _labels = labels
+        _attention_mask = attention_mask
         input_ids = [cur_input_ids[cur_attention_mask] for cur_input_ids, cur_attention_mask in zip(input_ids, attention_mask)]
         labels = [cur_labels[cur_attention_mask] for cur_labels, cur_attention_mask in zip(labels, attention_mask)]
 
@@ -495,7 +502,7 @@ class LlavaMiniMetaForCausalLM(ABC):
         cur_image_idx = 0
         for batch_idx, cur_input_ids in enumerate(input_ids):
             num_images = (cur_input_ids == IMAGE_TOKEN_INDEX).sum()
-            cur_text_features=text_features[batch_idx]
+            cur_text_features = text_features[batch_idx]
             if num_images == 0:
                 cur_image_features = image_features[cur_image_idx]
                 cur_input_embeds_1 = cur_text_features[_attention_mask[batch_idx]]
@@ -510,6 +517,7 @@ class LlavaMiniMetaForCausalLM(ABC):
             cur_labels = labels[batch_idx]
             cur_labels_noim = []
             cur_input_embeds_no_im=[]
+            # TODO: Now here
             for i in range(len(image_token_indices) - 1):
                 cur_input_embeds_no_im.append(cur_text_features[image_token_indices[i]+1:image_token_indices[i+1]])
                 cur_labels_noim.append(cur_labels[image_token_indices[i]+1:image_token_indices[i+1]])
