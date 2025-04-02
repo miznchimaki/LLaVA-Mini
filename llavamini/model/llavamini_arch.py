@@ -516,11 +516,10 @@ class LlavaMiniMetaForCausalLM(ABC):
             cur_input_ids_noim = []
             cur_labels = labels[batch_idx]
             cur_labels_noim = []
-            cur_input_embeds_no_im=[]
-            # TODO: Now here
+            cur_input_embeds_no_im = []
             for i in range(len(image_token_indices) - 1):
-                cur_input_embeds_no_im.append(cur_text_features[image_token_indices[i]+1:image_token_indices[i+1]])
-                cur_labels_noim.append(cur_labels[image_token_indices[i]+1:image_token_indices[i+1]])
+                cur_input_embeds_no_im.append(cur_text_features[image_token_indices[i] + 1: image_token_indices[i + 1]])
+                cur_labels_noim.append(cur_labels[image_token_indices[i] + 1: image_token_indices[i + 1]])
             cur_new_input_embeds = []
             cur_new_labels = []
             for i in range(num_images + 1):
@@ -536,7 +535,7 @@ class LlavaMiniMetaForCausalLM(ABC):
 
             cur_new_input_embeds = torch.cat(cur_new_input_embeds)
             cur_new_labels = torch.cat(cur_new_labels)
-            assert cur_new_input_embeds.size(0)==cur_new_labels.size(0)
+            assert cur_new_input_embeds.size(0) == cur_new_labels.size(0)
 
             new_input_embeds.append(cur_new_input_embeds)
             new_labels.append(cur_new_labels)
@@ -556,6 +555,7 @@ class LlavaMiniMetaForCausalLM(ABC):
         attention_mask = torch.zeros((batch_size, max_len), dtype=attention_mask.dtype, device=attention_mask.device)
         position_ids = torch.zeros((batch_size, max_len), dtype=position_ids.dtype, device=position_ids.device)
 
+        # TODO: Now here
         for i, (cur_new_embed, cur_new_labels) in enumerate(zip(new_input_embeds, new_labels)):
             cur_len = cur_new_embed.shape[0]
             if getattr(self.config, 'tokenizer_padding_side', 'right') == "left":
